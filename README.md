@@ -7,7 +7,7 @@
  - Clicking "PrecisionPlace" key while placing object will allow you to re-align item to the wall. 
  - Holding "PrecisionPlace" key will allow you to ignore placement restriction and place object anyway.
 
-**Reworked Vending Machine**:
+**Vending Machine Inventory**:
  - While holding "QuantityModifier" key, interact with arrows to access simplified inventory list.
  - Will show exact amount of items in selected stack when hovering over intractable arrows.
  - Simplified inventory list will switch only to the first available slot with chosen item.
