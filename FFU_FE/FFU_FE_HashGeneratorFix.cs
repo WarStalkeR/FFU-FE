@@ -3,7 +3,7 @@
 #pragma warning disable IDE0019
 #pragma warning disable IDE0002
 
-using System.Collections;
+/*using System.Collections;
 using System.Collections.Generic;
 using Assets.Scripts.Inventory;
 using Assets.Scripts.Networking;
@@ -156,4 +156,4 @@ namespace Assets.Scripts.Networking {
 			FabricatorId = reader.ReadNetworkId();
 		}
 	}
-}
+}*/
