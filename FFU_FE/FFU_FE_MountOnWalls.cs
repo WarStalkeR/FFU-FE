@@ -5,6 +5,7 @@
 
 using Assets.Scripts.GridSystem;
 using Assets.Scripts.Objects;
+using Assets.Scripts.Objects.Pipes;
 using Assets.Scripts.Serialization;
 using Assets.Scripts.UI;
 using Assets.Scripts.Util;
@@ -37,11 +38,11 @@ namespace Assets.Scripts.Inventory {
 		public static readonly string enablePlacement = "Turn on <color=orange>SCROLL LOCK</color> to enable the <color=yellow>experimental</color> placement mode (to place almost anywhere).";
 		public static readonly string disablePlacement = "<color=yellow><color=orange>Warning!</color> Experimental placement mode is enabled. Don't forget to turn off <color=orange>SCROLL LOCK</color> to disable it.</color>";
 		public static readonly string realignPlacement = "Use {KEY:PrecisionPlace} to <color=green>re-align</color> current object to the mountable surface, if it isn't aligned properly.";
-		[MonoModReplace] private void PlacementMode() {
+        [MonoModReplace] private void PlacementMode() {
 		/// Experimental placement mode implementation (via SCROLL LOCK).
 			tooltip = new PassiveTooltip(toDefault: true);
-			bool flag = (bool)(ActiveHand.Slot.Occupant as Constructor) || ConstructionPanel.IsVisible;
-			if ((!flag && !IsAuthoringMode) || KeyManager.GetMouseDown("Secondary")) {
+			bool isVisibleTool = (bool)(ActiveHand.Slot.Occupant as Constructor) || ConstructionPanel.IsVisible;
+			if ((!isVisibleTool && !IsAuthoringMode) || KeyManager.GetMouseDown("Secondary")) {
 				CancelPlacement();
 				return;
 			}
@@ -51,7 +52,9 @@ namespace Assets.Scripts.Inventory {
 			Transform thingTransform = trackedThing.ThingTransform;
 			Vector3 cameraForwardGrid = InputHelpers.GetCameraForwardGrid((ConstructionCursor.GridSize > 0.5f) ? 0.3f : 0.6f, ConstructionCursor.GetCursorOffset);
 			_parentMothership = (CursorManager.CursorThing ? CursorManager.CursorThing.GridController.ParentMothership : Mothership.GetNearbyMothership(cameraForwardGrid));
-			if ((bool)_parentMothership) cameraForwardGrid += thingTransform.position - trackedThing.ActiveRigidbody.position;
+			if ((bool)_parentMothership) {
+				cameraForwardGrid += thingTransform.position - trackedThing.ActiveRigidbody.position;
+			}
 			ConstructionCursor.GridController = ((_parentMothership != null) ? _parentMothership.GridController : GridController.World);
 			ConstructionCursor.Mothership = _parentMothership;
 			ConstructionCursor.Position = ConstructionCursor.ThingTransformPosition;
@@ -88,11 +91,11 @@ namespace Assets.Scripts.Inventory {
 					}
 					if ((ConstructionCursor.RotationAxis & RotationAxis.X) != 0) {
 						if (KeyManager.GetButtonUp(KeyMap.RotateUp)) {
-							ConstructionCursor.ThingTransform.Rotate(quaternion2 * Vector3.right, 90f, Space.World);
+							ConstructionCursor.ThingTransform.Rotate(quaternion2 * Vector3.right, (ConstructionCursor is IMounted) ? 180f : 90f, Space.World);
 							UIAudioManager.Play(RotateBlueprintHash);
 						}
 						if (KeyManager.GetButtonUp(KeyMap.RotateDown)) {
-							ConstructionCursor.ThingTransform.Rotate(quaternion2 * Vector3.right, -90f, Space.World);
+							ConstructionCursor.ThingTransform.Rotate(quaternion2 * Vector3.right, (ConstructionCursor is IMounted) ? (-180f) : (-90f), Space.World);
 							UIAudioManager.Play(RotateBlueprintHash);
 						}
 					}
@@ -113,11 +116,17 @@ namespace Assets.Scripts.Inventory {
 				_worldMasterGrid = ConstructionCursor.GridController.ClampWorld(cameraForwardGrid);
 				ConstructionCursor.ThingTransformPosition = _worldGrid;
 				_cursorPosition = ConstructionCursor.ThingTransformPosition;
-				if (newScrollData > 0f) SmartRotate.GetNext(ConstructionCursor as ISmartRotatable, _storedMothershipRotation);
-				else if (newScrollData < 0f) SmartRotate.GetPrevious(ConstructionCursor as ISmartRotatable, _storedMothershipRotation);
+				if (newScrollData > 0f) {
+					SmartRotate.GetNext(ConstructionCursor as ISmartRotatable, _storedMothershipRotation);
+				} else if (newScrollData < 0f) {
+					SmartRotate.GetPrevious(ConstructionCursor as ISmartRotatable, _storedMothershipRotation);
+				}
 				if (!_usingAutoplace) {
-					if (KeyManager.GetButton(KeyMap.MouseInspect)) SmartRotate.GetPrevious(ConstructionCursor as ISmartRotatable, _storedMothershipRotation);
-					else SmartRotate.GetNext(ConstructionCursor as ISmartRotatable, _storedMothershipRotation);
+					if (KeyManager.GetButton(KeyMap.MouseInspect)) {
+						SmartRotate.GetPrevious(ConstructionCursor as ISmartRotatable, _storedMothershipRotation);
+					} else {
+						SmartRotate.GetNext(ConstructionCursor as ISmartRotatable, _storedMothershipRotation);
+					}
 					_usingAutoplace = true;
 				}
 				break;
@@ -126,13 +135,13 @@ namespace Assets.Scripts.Inventory {
 					if ((object)structure != null) {
 						if (modePlacementExperimental) {
 							Vector3 thingTransformPosition = structure.ThingTransformPosition;
-							Vector3 vector = Vector3.zero;
-							vector = RocketGrid.GetClosest(ConstructionCursor.GridController.GetWorldGridFaces(thingTransformPosition), cameraForwardGrid) - thingTransformPosition;
+							Vector3 vectorZero = Vector3.zero;
+							vectorZero = RocketGrid.GetClosest(ConstructionCursor.GridController.GetWorldGridFaces(thingTransformPosition), cameraForwardGrid) - thingTransformPosition;
 							Vector3 normalized = (thingTransformPosition - Parent.ThingTransformPosition).normalized;
-							if (Vector3.Dot(vector, normalized) <= 0f) {
+							if (Vector3.Dot(vectorZero, normalized) <= 0f) {
 								_cursorPosition = _worldGrid;
 								ConstructionCursor.ThingTransformPosition = _cursorPosition;
-								ConstructionCursor.ThingTransform.RotateOnto(ConstructionCursor.ThingTransform.forward, vector);
+								ConstructionCursor.ThingTransform.RotateOnto(ConstructionCursor.ThingTransform.forward, vectorZero);
 								ConstructionCursor.ThingTransform.RotateOnto(ConstructionCursor.ThingTransform.up, ConstructionCursor.ThingTransform.up.FindClosestLocalAxis(structure.ThingTransform), ConstructionCursor.ThingTransform.forward);
 								var refItemAngles = ConstructionCursor.ThingTransform.rotation.eulerAngles;
 								var refWallAngles = structure.ThingTransform.rotation.eulerAngles;
@@ -192,64 +201,67 @@ namespace Assets.Scripts.Inventory {
 							}
 						} else if (structure.AllowMounting) {
 							Vector3 thingTransformPosition = structure.ThingTransformPosition;
-							Vector3 vector = Vector3.zero;
+							Vector3 target = Vector3.zero;
 							switch (structure.GetPlacementType()) {
 								case PlacementSnap.Grid:
-								vector = RocketGrid.GetClosest(ConstructionCursor.GridController.GetWorldGridFaces(thingTransformPosition), cameraForwardGrid) - thingTransformPosition;
+								target = RocketGrid.GetClosest(ConstructionCursor.GridController.GetWorldGridFaces(thingTransformPosition), cameraForwardGrid) - thingTransformPosition;
 								break;
 								case PlacementSnap.Face:
-								case PlacementSnap.FaceMount:
-								default:
-								vector = structure.ThingTransform.forward;
-								break;
-							}
-							Vector3 normalized = (thingTransformPosition - Parent.ThingTransformPosition).normalized;
-							if (Vector3.Dot(vector, normalized) <= 0f) {
-								_cursorPosition = _worldGrid;
-								ConstructionCursor.ThingTransformPosition = _cursorPosition;
-								ConstructionCursor.ThingTransform.RotateOnto(ConstructionCursor.ThingTransform.forward, vector);
-								ConstructionCursor.ThingTransform.RotateOnto(ConstructionCursor.ThingTransform.up, ConstructionCursor.ThingTransform.up.FindClosestLocalAxis(structure.ThingTransform), ConstructionCursor.ThingTransform.forward);
-								if (!KeyManager.GetButton(KeyMap.QuantityModifier)) {
-									_usingAutoplace = false;
-									if (KeyManager.GetButtonUp(KeyMap.RotateRollRight)) {
-										ConstructionCursor.ThingTransform.Rotate(Vector3.forward, 90f, Space.Self);
-										UIAudioManager.Play(RotateBlueprintHash);
-									}
-									if (KeyManager.GetButtonUp(KeyMap.RotateRollLeft)) {
-										ConstructionCursor.ThingTransform.Rotate(Vector3.forward, -90f, Space.Self);
-										UIAudioManager.Play(RotateBlueprintHash);
-									}
-								} else {
-									if (newScrollData > 0f) SmartRotate.GetNext(ConstructionCursor as ISmartRotatable);
-									else if (newScrollData < 0f) SmartRotate.GetPrevious(ConstructionCursor as ISmartRotatable);
-									if (!_usingAutoplace) {
-										SmartRotate.GetNext(ConstructionCursor as ISmartRotatable);
-										_usingAutoplace = true;
-									}
+								case PlacementSnap.FaceMount: {
+									Vector3 forward = structure.ThingTransform.forward;
+									Vector3 a = thingTransformPosition + forward;
+									Vector3 a2 = thingTransformPosition - forward;
+									target = ((!(Vector3.Distance(a, Parent.ThingTransform.position) < Vector3.Distance(a2, Parent.ThingTransform.position))) ? (-forward) : forward);
+									break;
 								}
-								canMountResult = ConstructionCursor.CanMountOnWall();
-								bool canMount = canMountResult;
-								notBlocked = notBlocked && canMount;
-								break;
 							}
-							canMountResult.result = Structure.WallMountResult.InvalidFacingMismatch;
-							canMountResult.support = structure;
-							canMountResult.offending = structure;
-						} else {
-							canMountResult.result = Structure.WallMountResult.InvalidNotMountable;
-							canMountResult.support = structure;
-							canMountResult.offending = structure;
+							_cursorPosition = _worldGrid;
+							ConstructionCursor.ThingTransformPosition = _cursorPosition;
+							ConstructionCursor.ThingTransform.RotateOnto(ConstructionCursor.ThingTransform.forward, target);
+							ConstructionCursor.ThingTransform.RotateOnto(ConstructionCursor.ThingTransform.up, ConstructionCursor.ThingTransform.up.FindClosestLocalAxis(structure.ThingTransform), ConstructionCursor.ThingTransform.forward);
+							if (!KeyManager.GetButton(KeyMap.QuantityModifier)) {
+								_usingAutoplace = false;
+								if (KeyManager.GetButtonUp(KeyMap.RotateRollRight)) {
+									ConstructionCursor.ThingTransform.Rotate(Vector3.forward, 90f, Space.Self);
+									UIAudioManager.Play(RotateBlueprintHash);
+								}
+								if (KeyManager.GetButtonUp(KeyMap.RotateRollLeft)) {
+									ConstructionCursor.ThingTransform.Rotate(Vector3.forward, -90f, Space.Self);
+									UIAudioManager.Play(RotateBlueprintHash);
+								}
+							} else {
+								if (newScrollData > 0f) {
+									SmartRotate.GetNext(ConstructionCursor as ISmartRotatable);
+								} else if (newScrollData < 0f) {
+									SmartRotate.GetPrevious(ConstructionCursor as ISmartRotatable);
+								}
+								if (!_usingAutoplace) {
+									SmartRotate.GetNext(ConstructionCursor as ISmartRotatable);
+									_usingAutoplace = true;
+								}
+							}
+							canMountResult = ConstructionCursor.CanMountOnWall();
+							bool canMount = canMountResult;
+							notBlocked = notBlocked && canMount;
+							break;
 						}
-					} else canMountResult.result = Structure.WallMountResult.InvalidMissingSupport;
+						canMountResult.result = Structure.WallMountResult.InvalidNotMountable;
+						canMountResult.support = structure;
+						canMountResult.offending = structure;
+					} else {
+						canMountResult.result = Structure.WallMountResult.InvalidMissingSupport;
+					}
 					_cursorPosition = cameraForwardGrid;
 					_worldGrid = cameraForwardGrid;
 					ConstructionCursor.ThingTransformPosition = cameraForwardGrid;
-					Vector3 vector2 = ((!(ParentHuman != null)) ? (Parent.ThingTransformPosition - ConstructionCursor.ThingTransformPosition).normalized : ((!ParentHuman.HasAuthority) ? (ParentHuman.HeadBone.position - ConstructionCursor.ThingTransformPosition).normalized : (-CameraController.Instance.MainCameraTransform.forward)));
-					Vector3 vector3 = Vector3.Cross(Vector3.up, vector2);
-					if (RocketMath.Approximately(vector3, Vector3.zero)) vector3 = Vector3.Cross(Vector3.right, vector2);
-					Vector3 vector4 = ((Mathf.Abs(Vector3.Dot(ConstructionCursor.ThingTransform.right, vector3)) > Mathf.Abs(Vector3.Dot(ConstructionCursor.ThingTransform.up, vector3))) ? ConstructionCursor.ThingTransform.right : ConstructionCursor.ThingTransform.up);
-					ConstructionCursor.ThingTransform.RotateOnto(vector4, vector4.FindClosestLocalAxis(vector3));
-					ConstructionCursor.ThingTransform.RotateOnto(ConstructionCursor.ThingTransform.forward, vector2, vector3);
+					Vector3 vector = ((!(ParentHuman != null)) ? (Parent.ThingTransformPosition - ConstructionCursor.ThingTransformPosition).normalized : ((!ParentHuman.HasAuthority) ? (ParentHuman.HeadBone.position - ConstructionCursor.ThingTransformPosition).normalized : (-CameraController.Instance.MainCameraTransform.forward)));
+					Vector3 vector2 = Vector3.Cross(Vector3.up, vector);
+					if (RocketMath.Approximately(vector2, Vector3.zero)) {
+						vector2 = Vector3.Cross(Vector3.right, vector);
+					}
+					Vector3 vector3 = ((Mathf.Abs(Vector3.Dot(ConstructionCursor.ThingTransform.right, vector2)) > Mathf.Abs(Vector3.Dot(ConstructionCursor.ThingTransform.up, vector2))) ? ConstructionCursor.ThingTransform.right : ConstructionCursor.ThingTransform.up);
+					ConstructionCursor.ThingTransform.RotateOnto(vector3, vector3.FindClosestLocalAxis(vector2));
+					ConstructionCursor.ThingTransform.RotateOnto(ConstructionCursor.ThingTransform.forward, vector, vector2);
 					notBlocked = false;
 					if (KeyManager.GetButtonUp(KeyMap.RotateRollRight)) {
 						ConstructionCursor.ThingTransform.Rotate(Vector3.forward, 90f, Space.Self);
@@ -338,11 +350,17 @@ namespace Assets.Scripts.Inventory {
 					_worldGrid = ConstructionCursor.GetWorldGrid(cameraForwardGrid);
 					_worldMasterGrid = ConstructionCursor.GridController.ClampWorld(cameraForwardGrid);
 					ConstructionCursor.ThingTransformPosition = _worldGrid - ConstructionCursor.ThingTransform.forward * ConstructionCursor.GridSize / 2f;
-					if (newScrollData > 0f) SmartRotate.GetNext(ConstructionCursor as ISmartRotatable, _storedMothershipRotation, _worldGrid);
-					else if (newScrollData < 0f) SmartRotate.GetPrevious(ConstructionCursor as ISmartRotatable, _storedMothershipRotation, _worldGrid);
+					if (newScrollData > 0f) {
+						SmartRotate.GetNext(ConstructionCursor as ISmartRotatable, _storedMothershipRotation, _worldGrid);
+					} else if (newScrollData < 0f) {
+						SmartRotate.GetPrevious(ConstructionCursor as ISmartRotatable, _storedMothershipRotation, _worldGrid);
+					}
 					if (!_usingAutoplace) {
-						if (KeyManager.GetButton(KeyMap.MouseInspect)) SmartRotate.GetPrevious(ConstructionCursor as ISmartRotatable, _storedMothershipRotation, _worldGrid);
-						else SmartRotate.GetNext(ConstructionCursor as ISmartRotatable, _storedMothershipRotation, _worldGrid);
+						if (KeyManager.GetButton(KeyMap.MouseInspect)) {
+							SmartRotate.GetPrevious(ConstructionCursor as ISmartRotatable, _storedMothershipRotation, _worldGrid);
+						} else {
+							SmartRotate.GetNext(ConstructionCursor as ISmartRotatable, _storedMothershipRotation, _worldGrid);
+						}
 						_usingAutoplace = true;
 					}
 					CurrentFace = RocketGrid.FaceInt.FaceIntFromDir(RocketGrid.GetFaceDir(ConstructionCursor.ThingTransformPosition, _worldGrid, _storedMothershipRotation));
@@ -375,6 +393,7 @@ namespace Assets.Scripts.Inventory {
 					notBlocked &= mergeable.CanReplace(multiConstructor, inactiveHandItem);
 				}
 			}
+			(ConstructionCursor as IMounted)?.Mount(ConstructionCursor.ThingTransform.position.ToGrid(ConstructionCursor.GridSize, ConstructionCursor.GridOffset));
 			if (notBlocked && ConstructionCursor.StructureCollisionType == CollisionType.BlockGrid) {
 				notBlocked = Vector3.SqrMagnitude(_worldGrid - Parent.RigidBody.worldCenterOfMass.GridCenter(ConstructionCursor.GridSize, ConstructionCursor.GridOffset)) > ConstructionCursor.GridSize / 2f;
 				if (notBlocked) {
@@ -393,34 +412,29 @@ namespace Assets.Scripts.Inventory {
 				}
 			}
 			if (KeyManager.GetMouseDown("Primary") && notBlocked) {
-				/*
-				// The whole idea here is to remove/dismantle overlapped item. But as it seems it won't happen anytime soon.
-				if (modePlacementExperimental && isSmallGrid) {
-					Item item = ActiveHand.Slot.Occupant as Item;
-					if ((bool)CursorManager.CursorThing && (bool)item) {
-						foreach (DynamicThing dynamicObject in DynamicThing.DynamicObjects) {
-							Attack doDismantle = new Attack(item, InactiveHand.Slot, dynamicObject.Position, dynamicObject, 0f, CursorManager.Instance.CursorTargetCollider, IsAuthoringMode, false);
-							Thing.DelayedActionInstance delayedActionInstance = CursorManager.CursorThing.AttackWith(doDismantle, doAction: false);
-							if (ActionCoroutine == null && delayedActionInstance != null && !delayedActionInstance.IsDisabled) {
-								ActionCoroutine = StartCoroutine(WaitUntilDone(UseItemComplete, delayedActionInstance, item.ConstructingSoundHash, item.FinishedConstructingSoundHash));
-								UseItemComplete();
-							}
-						}
-					}
-				}
-				*/
 				_usePrimaryPosition = _cursorPosition;
 				_usePrimaryRotation = ConstructionCursor.ThingTransform.rotation;
-				if (ConstructionCursor.BuildPlacementTime > 0f) ActionCoroutine = StartCoroutine(WaitUntilDone(UsePrimaryComplete, ConstructionCursor.BuildPlacementTime, ConstructionCursor));
-				else UsePrimaryComplete();
+				if (ConstructionCursor.BuildPlacementTime > 0f) {
+					float num = 1f;
+					if (ParentHuman.Suit == null) {
+						num += 0.2f;
+					}
+					num = Mathf.Clamp(num, 0.2f, 5f);
+					ActionCoroutine = StartCoroutine(WaitUntilDone(UsePrimaryComplete, ConstructionCursor.BuildPlacementTime / num, ConstructionCursor));
+				} else {
+					UsePrimaryComplete();
+				}
 				return;
 			}
 			Color color = (notBlocked ? Color.green : Color.red);
 			if ((bool)smallGrid) {
 				List<Connection> list = ConstructionCursor.WillJoinNetwork();
 				foreach (Connection openEnd in smallGrid.OpenEnds) {
-					if (notBlocked) openEnd.HelperRenderer.material.color = (list.Contains(openEnd) ? Color.yellow.SetAlpha(CursorAlphaConstructionHelper) : Color.green.SetAlpha(CursorAlphaConstructionHelper));
-					else openEnd.HelperRenderer.material.color = Color.red.SetAlpha(CursorAlphaConstructionHelper);
+					if (notBlocked) {
+						openEnd.HelperRenderer.material.color = (list.Contains(openEnd) ? Color.yellow.SetAlpha(CursorAlphaConstructionHelper) : Color.green.SetAlpha(CursorAlphaConstructionHelper));
+					} else {
+						openEnd.HelperRenderer.material.color = Color.red.SetAlpha(CursorAlphaConstructionHelper);
+					}
 				}
 				color = ((notBlocked && list.Count > 0) ? Color.yellow : color);
 			}
@@ -428,31 +442,43 @@ namespace Assets.Scripts.Inventory {
 			tooltip.Title = ConstructionCursor.DisplayName;
 			tooltip.color = color;
 			tooltip.Slider = -1f;
-			if ((bool)_parentMothership) tooltip.ConstructString = InterfaceStrings.MothershipConstruction;
+			if ((bool)_parentMothership) {
+				tooltip.ConstructString = InterfaceStrings.MothershipConstruction;
+			}
 			if ((bool)multiConstructor && !multiConstructor.CanBuild(ConstructionPanel.BuildIndex)) {
-				if (!string.IsNullOrEmpty(tooltip.ConstructString)) tooltip.ConstructString += "\n";
+				if (!string.IsNullOrEmpty(tooltip.ConstructString)) {
+					tooltip.ConstructString += "\n";
+				}
 				tooltip.ConstructString += string.Format(InterfaceStrings.NeedMoreKit, multiConstructor.ToTooltip());
 			}
 			if (Settings.CurrentData.ExtendedTooltips) {
-				if (flag || (bool)multiConstructor) {
+				if (isVisibleTool || (bool)multiConstructor) {
 					tooltip.ShowScroll = !KeyManager.GetButton(KeyMap.QuantityModifier) && multiConstructor != null && multiConstructor.Constructables.Count > 1;
 					tooltip.ShowRotate = !KeyManager.GetButton(KeyMap.QuantityModifier);
 					tooltip.ShowConstructionRotate = KeyManager.GetButton(KeyMap.QuantityModifier);
-					if (multiConstructor != null) tooltip.BuildStateIndexMessage = string.Format(InterfaceStrings.TooltipNumberofBuildState, multiConstructor.LastSelectedIndex + 1, multiConstructor.Constructables.Count);
+					if (multiConstructor != null) {
+						tooltip.BuildStateIndexMessage = string.Format(InterfaceStrings.TooltipNumberofBuildState, multiConstructor.LastSelectedIndex + 1, multiConstructor.Constructables.Count);
+					}
 				}
 				if (ConstructionCursor.BuildStates.Count > 1) {
 					Structure.BuildState buildState = ConstructionCursor.BuildStates[1];
 					if ((bool)buildState.Tool.ToolEntry && (bool)buildState.Tool.ToolEntry2) {
-						if (!string.IsNullOrEmpty(tooltip.ConstructString)) tooltip.ConstructString += "\n";
+						if (!string.IsNullOrEmpty(tooltip.ConstructString)) {
+							tooltip.ConstructString += "\n";
+						}
 						tooltip.ConstructString += string.Format(InterfaceStrings.TooltipUpgrade2, buildState.Tool.ToolEntry.ToTooltip(), buildState.Tool.ToolEntry2.ToTooltip());
 					} else if ((bool)buildState.Tool.ToolEntry) {
-						if (!string.IsNullOrEmpty(tooltip.ConstructString)) tooltip.ConstructString += "\n";
+						if (!string.IsNullOrEmpty(tooltip.ConstructString)) {
+							tooltip.ConstructString += "\n";
+						}
 						tooltip.ConstructString += string.Format(InterfaceStrings.TooltipUpgrade, buildState.Tool.ToolEntry.ToTooltip());
 					}
 				}
 				switch (ConstructionCursor.PlacementType) {
 					case PlacementSnap.Grid:
-					if (!string.IsNullOrEmpty(tooltip.PlacementString)) tooltip.PlacementString += "\n";
+					if (!string.IsNullOrEmpty(tooltip.PlacementString)) {
+						tooltip.PlacementString += "\n";
+					}
 					tooltip.PlacementString += InterfaceStrings.TooltipPlacementSnapGrid;
 					if (!modePlacementExperimental && isSmallGrid) {
 						tooltip.PlacementString += "\n";
@@ -462,12 +488,17 @@ namespace Assets.Scripts.Inventory {
 						tooltip.PlacementString += string.Format(Localization.ParseTooltip(disablePlacement, false));
 					}
 					if (!notBlocked) {
-						if (GridController.World.StructureExistsOnGrid(ConstructionCursor.Position)) AddErrorTooltip(InterfaceStrings.TooltipPlacementSnapFaceMountBlocked(canMountResult.offending));
-						else AddErrorTooltip(InterfaceStrings.TooltipPlacementSnapFaceMountMissingSupport);
+						if (GridController.World.StructureExistsOnGrid(ConstructionCursor.Position)) {
+							AddErrorTooltip(InterfaceStrings.TooltipPlacementSnapFaceMountBlocked(canMountResult.offending));
+						} else {
+							AddErrorTooltip(InterfaceStrings.TooltipPlacementSnapFaceMountMissingSupport);
+						}
 					}
 					break;
 					case PlacementSnap.Face:
-					if (!string.IsNullOrEmpty(tooltip.PlacementString)) tooltip.PlacementString += "\n";
+					if (!string.IsNullOrEmpty(tooltip.PlacementString)) {
+						tooltip.PlacementString += "\n";
+					}
 					tooltip.PlacementString += InterfaceStrings.TooltipPlacementSnapFace;
 					if (!modePlacementExperimental && isSmallGrid) {
 						tooltip.PlacementString += "\n";
@@ -481,12 +512,17 @@ namespace Assets.Scripts.Inventory {
 						tooltip.PlacementString += string.Format(Localization.ParseTooltip(realignPlacement, false));
 					}
 					if (!notBlocked) {
-						if (GridController.World.StructureExistsOnGrid(ConstructionCursor.Position)) AddErrorTooltip(InterfaceStrings.TooltipPlacementSnapFaceMountBlocked(canMountResult.offending)); 
-						else AddErrorTooltip(InterfaceStrings.TooltipPlacementSnapFaceMountMissingSupport);
+						if (GridController.World.StructureExistsOnGrid(ConstructionCursor.Position)) {
+							AddErrorTooltip(InterfaceStrings.TooltipPlacementSnapFaceMountBlocked(canMountResult.offending));
+						} else {
+							AddErrorTooltip(InterfaceStrings.TooltipPlacementSnapFaceMountMissingSupport);
+						}
 					}
 					break;
 					case PlacementSnap.FaceMount:
-					if (!string.IsNullOrEmpty(tooltip.PlacementString)) tooltip.PlacementString += "\n";
+					if (!string.IsNullOrEmpty(tooltip.PlacementString)) {
+						tooltip.PlacementString += "\n";
+					}
 					tooltip.PlacementString += InterfaceStrings.TooltipPlacementSnapFaceMount;
 					if (!modePlacementExperimental && isSmallGrid) {
 						tooltip.PlacementString += "\n";
@@ -521,24 +557,34 @@ namespace Assets.Scripts.Inventory {
 				if (!_usingAutoplace) {
 					tooltip.ShowRotate = true;
 				} else {
-					if (!string.IsNullOrEmpty(tooltip.PlacementString)) tooltip.PlacementString += "\n";
+					if (!string.IsNullOrEmpty(tooltip.PlacementString)) {
+						tooltip.PlacementString += "\n";
+					}
 					tooltip.ShowScroll = false;
 				}
 				if (ConstructionCursor.AllowMounting) {
-					if (!string.IsNullOrEmpty(tooltip.State)) tooltip.State += "\n";
+					if (!string.IsNullOrEmpty(tooltip.State)) {
+						tooltip.State += "\n";
+					}
 					tooltip.State += InterfaceStrings.TooltipAllowsMounting;
 				}
 				if (ConstructionCursor.RotationAxis != 0 && !_usingAutoplace) {
 					if (((ConstructionCursor.RotationAxis & RotationAxis.Y) != 0) || modePlacementExperimental) {
-						if (!string.IsNullOrEmpty(tooltip.PlacementString)) tooltip.PlacementString += "\n";
+						if (!string.IsNullOrEmpty(tooltip.PlacementString)) {
+							tooltip.PlacementString += "\n";
+						}
 						tooltip.PlacementString += InterfaceStrings.TooltipRotateLeftRight;
 					}
 					if (((ConstructionCursor.RotationAxis & RotationAxis.X) != 0) || modePlacementExperimental) {
-						if (!string.IsNullOrEmpty(tooltip.PlacementString)) tooltip.PlacementString += "\n";
+						if (!string.IsNullOrEmpty(tooltip.PlacementString)) {
+							tooltip.PlacementString += "\n";
+						}
 						tooltip.PlacementString += InterfaceStrings.TooltipRotateUpDown;
 					}
 					if (((ConstructionCursor.RotationAxis & RotationAxis.Z) != 0) || modePlacementExperimental) {
-						if (!string.IsNullOrEmpty(tooltip.PlacementString)) tooltip.PlacementString += "\n";
+						if (!string.IsNullOrEmpty(tooltip.PlacementString)) {
+							tooltip.PlacementString += "\n";
+						}
 						tooltip.PlacementString += InterfaceStrings.TooltipRollLeftRight;
 					}
 				}
@@ -548,13 +594,17 @@ namespace Assets.Scripts.Inventory {
 				ConstructionCursor.Wireframe.BlueprintRenderer.material.color = color;
 			} else {
 				foreach (ThingRenderer renderer in ConstructionCursor.Renderers) {
-					if (renderer.HasRenderer()) renderer.SetColor(color);
+					if (renderer.HasRenderer()) {
+						renderer.SetColor(color);
+					}
 				}
 			}
 			CursorManager.SetSelectionColor(color.SetAlpha(CursorAlphaConstructionGrid));
 			TooltipRef.HandleToolTipDisplay(tooltip);
 			void AddErrorTooltip(string tooltipText) {
-				if (!string.IsNullOrEmpty(tooltip.State)) tooltip.State += "\n";
+				if (!string.IsNullOrEmpty(tooltip.State)) {
+					tooltip.State += "\n";
+				}
 				ref string state = ref tooltip.State;
 				state = state + "<color=red>" + tooltipText + "</color>";
 			}

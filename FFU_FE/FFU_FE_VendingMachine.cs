@@ -4,7 +4,6 @@
 #pragma warning disable IDE1006
 #pragma warning disable IDE0019
 
-using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using Assets.Scripts.GridSystem;
@@ -17,6 +16,7 @@ using Assets.Scripts.Util;
 using Assets.Scripts.UI;
 using UnityEngine;
 using MonoMod;
+using Assets.Scripts.Localization2;
 
 namespace Assets.Scripts.Objects.Electrical {
 	[MonoModReplace] public class VendingMachine : DeviceImportExport, ITradeable {
@@ -37,7 +37,7 @@ namespace Assets.Scripts.Objects.Electrical {
 		public Renderer Screen;
 		private GameAudioSource _vendButtonAudio;
 		[ByteArraySync] public int CurrentIndex {
-			get { 
+			get {
 				return _currentIndex;
 			}
 			set {
@@ -52,14 +52,19 @@ namespace Assets.Scripts.Objects.Electrical {
 			}
 		}
 		public bool HasSomething => _filledSlots > 0;
+		public override bool CanIceMelt => false;
 		public Slot CurrentSlot => Slots[CurrentIndex];
 		public override void BuildUpdate(RocketBinaryWriter writer, ushort networkUpdateType) {
 			base.BuildUpdate(writer, networkUpdateType);
-			if (Thing.IsNetworkUpdateRequired(256u, networkUpdateType)) writer.WriteInt32(CurrentIndex);
+			if (Thing.IsNetworkUpdateRequired(256u, networkUpdateType)) {
+				writer.WriteInt32(CurrentIndex);
+			}
 		}
 		public override void ProcessUpdate(RocketBinaryReader reader, ushort networkUpdateType) {
 			base.ProcessUpdate(reader, networkUpdateType);
-			if (Thing.IsNetworkUpdateRequired(256u, networkUpdateType)) CurrentIndex = reader.ReadInt32();
+			if (Thing.IsNetworkUpdateRequired(256u, networkUpdateType)) {
+				CurrentIndex = reader.ReadInt32();
+			}
 		}
 		public override void SerializeOnJoin(RocketBinaryWriter writer) {
 			base.SerializeOnJoin(writer);
@@ -77,23 +82,31 @@ namespace Assets.Scripts.Objects.Electrical {
 		public override void DeserializeSave(ThingSaveData savedData) {
 			base.DeserializeSave(savedData);
 			VendingMachineSaveData vendingMachineSaveData = savedData as VendingMachineSaveData;
-			if (vendingMachineSaveData != null) CurrentIndex = vendingMachineSaveData.CurrentIndex;
+			if (vendingMachineSaveData != null) {
+				CurrentIndex = vendingMachineSaveData.CurrentIndex;
+			}
 		}
 		protected override void InitialiseSaveData(ref ThingSaveData savedData) {
 			base.InitialiseSaveData(ref savedData);
 			VendingMachineSaveData vendingMachineSaveData = savedData as VendingMachineSaveData;
-			if (vendingMachineSaveData != null) vendingMachineSaveData.CurrentIndex = CurrentIndex;
+			if (vendingMachineSaveData != null) {
+				vendingMachineSaveData.CurrentIndex = CurrentIndex;
+			}
 		}
 		private int SetRequestFromHash(int hash) {
 			int num = Slots.FindIndex(2, (Slot slot) => (bool)slot.Occupant && slot.Occupant.PrefabHash == hash);
-			if (num < 0) return -1;
+			if (num < 0) {
+				return -1;
+			}
 			RequestedHash = hash;
 			return num;
 		}
 		private IEnumerator WaitSetRequestFromHash(int hash) {
 			int index = SetRequestFromHash(hash);
 			if (index >= 2) {
-				while (!Powered || IsLocked) yield return _waitForFrame;
+				while (!Powered || IsLocked) {
+					yield return _waitForFrame;
+				}
 				OnServer.Interact(base.InteractLock, 1);
 				CurrentIndex = index;
 				yield return _waitForDelay;
@@ -104,44 +117,52 @@ namespace Assets.Scripts.Objects.Electrical {
 			}
 		}
 		public override bool CanLogicWrite(LogicType logicType) {
-			if (logicType == LogicType.RequestHash) return true;
+			if (logicType == LogicType.RequestHash) {
+				return true;
+			}
 			return base.CanLogicWrite(logicType);
 		}
 		public override void SetLogicValue(LogicType logicType, double value) {
 			base.SetLogicValue(logicType, value);
 			if (logicType == LogicType.RequestHash) {
-				if (GameManager.IsThread) UnityMainThreadDispatcher.Instance().Enqueue(WaitSetRequestFromHash((int)value));
-				else StartCoroutine(WaitSetRequestFromHash((int)value));
+				if (GameManager.IsThread) {
+					UnityMainThreadDispatcher.Instance().Enqueue(WaitSetRequestFromHash((int)value));
+				} else {
+					StartCoroutine(WaitSetRequestFromHash((int)value));
+				}
 			}
 		}
 		public override bool CanLogicRead(LogicType logicType) {
 			switch (logicType) {
 				case LogicType.RequestHash:
-				return true;
+					return true;
 				case LogicType.Quantity:
-				return true;
+					return true;
 				case LogicType.Ratio:
-				return true;
+					return true;
 				default:
-				return base.CanLogicRead(logicType);
+					return base.CanLogicRead(logicType);
 			}
 		}
 		private void CalculateFilledSlots() {
 			int num = 0;
-			for (int i = 2; i < Slots.Count; i++) 
-				if ((bool)Slots[i].Occupant) num++;
+			for (int i = 2; i < Slots.Count; i++) {
+				if ((bool)Slots[i].Occupant) {
+					num++;
+				}
+			}
 			_filledSlots = num;
 		}
 		public override double GetLogicValue(LogicType logicType) {
 			switch (logicType) {
 				case LogicType.RequestHash:
-				return RequestedHash;
+					return RequestedHash;
 				case LogicType.Quantity:
-				return _filledSlots;
+					return _filledSlots;
 				case LogicType.Ratio:
-				return (float)_filledSlots / 100f;
+					return (float)_filledSlots / 100f;
 				default:
-				return base.GetLogicValue(logicType);
+					return base.GetLogicValue(logicType);
 			}
 		}
 		private IEnumerator WaitThenCheck() {
@@ -158,7 +179,9 @@ namespace Assets.Scripts.Objects.Electrical {
 			Screen.material.SetTexture("_EmissionMap", texture2D);
 		}
 		protected override void OnServerImportTick() {
-			if (IsNextImportReady) TryChuteImport();
+			if (IsNextImportReady) {
+				TryChuteImport();
+			}
 		}
 		public override void OnChildEnterInventory(DynamicThing newChild) {
 			base.OnChildEnterInventory(newChild);
@@ -169,7 +192,9 @@ namespace Assets.Scripts.Objects.Electrical {
 			CalculateFilledSlots();
 		}
 		public override void OnChildExitInventory(DynamicThing previousChild) {
-			if (previousChild.ParentSlot == CurrentSlot && !CurrentSlot.IsInteractable) BaseAnimator.SetBool(HasContentsState, value: false);
+			if (previousChild.ParentSlot == CurrentSlot && !CurrentSlot.IsInteractable) {
+				BaseAnimator.SetBool(HasContentsState, value: false);
+			}
 			base.OnChildExitInventory(previousChild);
 			if (!base.BeingDestroyed) {
 				BaseAnimator.SetBool(HasContentsState, value: false);
@@ -184,9 +209,13 @@ namespace Assets.Scripts.Objects.Electrical {
 			int num2 = 0;
 			while (flag) {
 				num--;
-				if (num < 0) num = Slots.Count - 1;
+				if (num < 0) {
+					num = Slots.Count - 1;
+				}
 				Slot slot = Slots[num];
-				if (!slot.IsInteractable && (bool)slot.Occupant) flag = false;
+				if (!slot.IsInteractable && (bool)slot.Occupant) {
+					flag = false;
+				}
 				if (num2 > Slots.Count) {
 					num = CurrentIndex;
 					flag = false;
@@ -201,9 +230,13 @@ namespace Assets.Scripts.Objects.Electrical {
 			int num2 = 0;
 			while (flag) {
 				num++;
-				if (num >= Slots.Count) num = 0;
+				if (num >= Slots.Count) {
+					num = 0;
+				}
 				Slot slot = Slots[num];
-				if (!slot.IsInteractable && (bool)slot.Occupant) flag = false;
+				if (!slot.IsInteractable && (bool)slot.Occupant) {
+					flag = false;
+				}
 				if (num2 > Slots.Count) {
 					num = CurrentIndex;
 					flag = false;
@@ -218,7 +251,7 @@ namespace Assets.Scripts.Objects.Electrical {
 		public void PlanBackward() {
 			CurrentIndex = SamplePlanBackward().SlotId;
 		}
-		public override void OnImportClosingComplete() {
+		protected override void OnImportClosingComplete() {
 			base.OnImportClosingComplete();
 			if (GameManager.RunSimulation) {
 				TryProcessImport();
@@ -274,57 +307,91 @@ namespace Assets.Scripts.Objects.Electrical {
 					Duration = 0f,
 					ActionMessage = interactable.ContextualName
 				};
-				if (IsLocked) return delayedActionInstance.Fail(HelpTextDevice.DeviceLocked);
-				if (!IsAuthorized(interaction.SourceThing)) return delayedActionInstance.Fail(Localization.ParseTooltip("Unable to interact as you do not have the required {SLOT:AccessCard}"));
+				if (IsLocked) {
+					return delayedActionInstance.Fail(GameStrings.DeviceLocked);
+				}
+				if (!IsAuthorized(interaction.SourceThing)) {
+					return delayedActionInstance.Fail(GameStrings.AccessCardUnableToInteract);
+				}
 				switch (interactable.Action) {
 					case InteractableType.Activate:
-					if (!OnOff) return delayedActionInstance.Fail(HelpTextDevice.DeviceNotOn);
-					if (!Powered) return delayedActionInstance.Fail(HelpTextDevice.DeviceNoPower);
-					if (Exporting != 0) return delayedActionInstance.Fail(HelpTextDevice.DeviceLocked);
-					if (!CurrentSlot.Occupant || !HasSomething) return delayedActionInstance.Fail("Nothing selected to dispense");
-					if (!doAction) return delayedActionInstance.Succeed();
-					PlaySound(VendButtonHash);
-					if (GameManager.RunSimulation) {
-						OnServer.MoveToSlot(CurrentSlot.Occupant, ExportSlot);
-						OnServer.Interact(base.InteractExport, 1);
-					}
-					return delayedActionInstance.Succeed();
+						if (!OnOff) {
+							return delayedActionInstance.Fail(GameStrings.DeviceNotOn);
+						}
+						if (!Powered) {
+							return delayedActionInstance.Fail(GameStrings.DeviceNoPower);
+						}
+						if (Exporting != 0) {
+							return delayedActionInstance.Fail(GameStrings.DeviceLocked);
+						}
+						if (!CurrentSlot.Occupant || !HasSomething) {
+							return delayedActionInstance.Fail(GameStrings.DeviceNothingSelectedToDispense);
+						}
+						if (!doAction) {
+							return delayedActionInstance.Succeed();
+						}
+						PlaySound(VendButtonHash);
+						if (GameManager.RunSimulation) {
+							OnServer.MoveToSlot(CurrentSlot.Occupant, ExportSlot);
+							OnServer.Interact(base.InteractExport, 1);
+						}
+						return delayedActionInstance.Succeed();
 					case InteractableType.Button1: {
 						if (!HasSomething) {
 							delayedActionInstance.ActionMessage = ActionStrings.Down;
-							return delayedActionInstance.Fail("Nothing inside to change to");
+							return delayedActionInstance.Fail(GameStrings.DeviceNothingToChangeTo);
 						}
 						if (KeyManager.GetButton(KeyCode.LeftShift) || KeyManager.GetButton(KeyCode.RightShift)) {
-							if (!doAction) return delayedActionInstance.Succeed();
+							if (!doAction) {
+								return delayedActionInstance.Succeed();
+							}
 							SortStoredItems();
-							foreach (int key in InputPrefabs.PrefabReferences.Keys) InputPrefabs.PrefabReferences[key].SetVisible(false);
-							if (InputPrefabs.ShowInputPanel("Vending Machine", null, GetDynamicThings(), MachineTier.Max)) InputPrefabs.OnSubmit += InputFinished;
+							foreach (int key in InputPrefabs.PrefabReferences.Keys) {
+								InputPrefabs.PrefabReferences[key].SetVisible(false);
+							}
+							if (InputPrefabs.ShowInputPanel("Vending Machine", null, GetDynamicThings(), MachineTier.Max)) {
+								InputPrefabs.OnSubmit += InputFinished;
+							}
 							return delayedActionInstance.Succeed();
 						}
 						Slot slot2 = SamplePlanBackward();
-						delayedActionInstance.StateMessage = string.Format(InterfaceStrings.ChangeSettingTo, slot2.Occupant ? slot2.Occupant.ToTooltip() : CurrentSlot.ToTooltip());
-						if (!doAction) return delayedActionInstance.Succeed();
+						delayedActionInstance.AppendStateMessage(GameStrings.GlobalChangeSettingTo, slot2.Occupant ? slot2.Occupant.ToTooltip() : CurrentSlot.ToTooltip());
+						if (!doAction) {
+							return delayedActionInstance.Succeed();
+						}
 						PlaySound(SelectButtonHash);
-						if (GameManager.RunSimulation) PlanBackward();
+						if (GameManager.RunSimulation) {
+							PlanBackward();
+						}
 						return delayedActionInstance.Succeed();
 					}
 					case InteractableType.Button2: {
 						if (!HasSomething) {
 							delayedActionInstance.ActionMessage = ActionStrings.Up;
-							return delayedActionInstance.Fail("Nothing inside to change to");
+							return delayedActionInstance.Fail(GameStrings.DeviceNothingToChangeTo);
 						}
 						if (KeyManager.GetButton(KeyCode.LeftShift) || KeyManager.GetButton(KeyCode.RightShift)) {
-							if (!doAction) return delayedActionInstance.Succeed();
+							if (!doAction) {
+								return delayedActionInstance.Succeed();
+							}
 							SortStoredItems();
-							foreach (int key in InputPrefabs.PrefabReferences.Keys) InputPrefabs.PrefabReferences[key].SetVisible(false);
-							if (InputPrefabs.ShowInputPanel("Vending Machine", null, GetDynamicThings(), MachineTier.Max)) InputPrefabs.OnSubmit += InputFinished;
+							foreach (int key in InputPrefabs.PrefabReferences.Keys) {
+								InputPrefabs.PrefabReferences[key].SetVisible(false);
+							}
+							if (InputPrefabs.ShowInputPanel("Vending Machine", null, GetDynamicThings(), MachineTier.Max)) {
+								InputPrefabs.OnSubmit += InputFinished;
+							}
 							return delayedActionInstance.Succeed();
 						}
 						Slot slot = SamplePlanForward();
-						delayedActionInstance.StateMessage = string.Format(InterfaceStrings.ChangeSettingTo, slot.Occupant ? slot.Occupant.ToTooltip() : CurrentSlot.ToTooltip());
-						if (!doAction) return delayedActionInstance.Succeed();
+						delayedActionInstance.AppendStateMessage(GameStrings.GlobalChangeSettingTo, slot.Occupant ? slot.Occupant.ToTooltip() : CurrentSlot.ToTooltip());
+						if (!doAction) {
+							return delayedActionInstance.Succeed();
+						}
 						PlaySound(SelectButtonHash);
-						if (GameManager.RunSimulation) PlanForward();
+						if (GameManager.RunSimulation) {
+							PlanForward();
+						}
 						return delayedActionInstance.Succeed();
 					}
 				}
@@ -367,23 +434,37 @@ namespace Assets.Scripts.Objects.Electrical {
 		}
 		public List<DynamicThing> GetContents() {
 			List<DynamicThing> list = new List<DynamicThing>();
-			foreach (Slot slot in Slots) 
-				if ((bool)slot.Occupant) list.Add(slot.Occupant);
+			foreach (Slot slot in Slots) {
+				if ((bool)slot.Occupant) {
+					list.Add(slot.Occupant);
+				}
+			}
 			return list;
 		}
 		public Dictionary<int, Slot> GetOccupiedSlots() {
 			Dictionary<int, Slot> dictionary = new Dictionary<int, Slot>();
-			for (int i = 2; i < Slots.Count; i++) 
-				if ((bool)Slots[i].Occupant) dictionary.Add(i, Slots[i]);
+			for (int i = 2; i < Slots.Count; i++) {
+				if ((bool)Slots[i].Occupant) {
+					dictionary.Add(i, Slots[i]);
+				}
+			}
 			return dictionary;
 		}
 		public void PlayVendButtonEnabledSound() {
-			if (_vendButtonAudio == null) _vendButtonAudio = GetAudioSource(GetAudioEvent(VendButtonHash).Channel);
-			if (Powered && (!_vendButtonAudio.isPlaying || _vendButtonAudio.CurrentClips?.NameHash != VendButtonHash)) PlaySound(VendButtonEnabledHash);
+			if (_vendButtonAudio == null) {
+				_vendButtonAudio = GetAudioSource(GetAudioEvent(VendButtonHash).Channel);
+			}
+			if (Powered && (!_vendButtonAudio.isPlaying || _vendButtonAudio.CurrentClips?.NameHash != VendButtonHash)) {
+				PlaySound(VendButtonEnabledHash);
+			}
 		}
 		public void PlayVendButtonDisabledSound() {
-			if (_vendButtonAudio == null) _vendButtonAudio = GetAudioSource(GetAudioEvent(VendButtonHash).Channel);
-			if (Powered && (!_vendButtonAudio.isPlaying || _vendButtonAudio.CurrentClips?.NameHash != VendButtonHash)) PlaySound(VendButtonDisabledHash);
+			if (_vendButtonAudio == null) {
+				_vendButtonAudio = GetAudioSource(GetAudioEvent(VendButtonHash).Channel);
+			}
+			if (Powered && (!_vendButtonAudio.isPlaying || _vendButtonAudio.CurrentClips?.NameHash != VendButtonHash)) {
+				PlaySound(VendButtonDisabledHash);
+			}
 		}
 	}
 }

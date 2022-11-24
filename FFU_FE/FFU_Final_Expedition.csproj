@@ -87,6 +87,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FFU_FE_MoreStationpedia.cs" />
     <Compile Include="FFU_FE_VendingMachine.cs" />
     <Compile Include="FFU_FE_HashGeneratorFix.cs" />
     <Compile Include="FFU_FE_MountOnWalls.cs" />
@@ -94,6 +95,6 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy "$(TargetPath)" "$(SolutionDir)..\..\BepInEx\monomod\Assembly-CSharp.FFU_FE.mm.dll" /Y</PostBuildEvent>
+    <PostBuildEvent>echo F | xcopy /F /Y "$(TargetPath)" "$(SolutionDir)..\..\BepInEx\monomod\Assembly-CSharp.FFU_FE.mm.dll"</PostBuildEvent>
   </PropertyGroup>
 </Project>
