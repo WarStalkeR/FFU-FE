@@ -88,6 +88,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="FFU_FE_MoreStationpedia.cs" />
+    <Compile Include="FFU_FE_PipeAnalyzerTemp.cs" />
     <Compile Include="FFU_FE_VendingMachine.cs" />
     <Compile Include="FFU_FE_HashGeneratorFix.cs" />
     <Compile Include="FFU_FE_MountOnWalls.cs" />
