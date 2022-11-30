@@ -147,7 +147,7 @@ namespace Assets.Scripts.Objects.Pipes {
 			}
 			PipeNetwork pipeNetwork = SmallCell.Pipe.PipeNetwork;
 			Tooltip.AppendLine($"Pressure {pipeNetwork.Atmosphere.PressureGassesAndLiquidsInPa.ToStringPrefix("Pa", "yellow")}");
-			Tooltip.AppendLine($"Temperature {pipeNetwork.Atmosphere.Temperature.ToStringPrefix("K", "yellow")} ({((pipeNetwork.Atmosphere.Temperature - 273.15)/1000).ToStringPrefix("°C", "yellow").Replace("m°C","°C")})");
+			Tooltip.AppendLine($"Temperature {pipeNetwork.Atmosphere.Temperature.ToStringPrefix("K", "yellow")} (<color=yellow>{(pipeNetwork.Atmosphere.Temperature - 273.15).ToStringRounded()}°C</color>)");
 			Tooltip.AppendLine(AtmosphericsManager.DisplayGas(pipeNetwork.Atmosphere.GasMixture, pipeNetwork.Atmosphere.GasMixture.Oxygen));
 			Tooltip.AppendLine(AtmosphericsManager.DisplayGas(pipeNetwork.Atmosphere.GasMixture, pipeNetwork.Atmosphere.GasMixture.Nitrogen));
 			Tooltip.AppendLine(AtmosphericsManager.DisplayGas(pipeNetwork.Atmosphere.GasMixture, pipeNetwork.Atmosphere.GasMixture.CarbonDioxide));
