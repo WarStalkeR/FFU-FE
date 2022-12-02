@@ -1,6 +1,7 @@
 ﻿#pragma warning disable CS0169
 #pragma warning disable CS0626
 #pragma warning disable CS0649
+#pragma warning disable IDE0002
 #pragma warning disable IDE1006
 #pragma warning disable IDE0019
 
@@ -16,11 +17,11 @@ using UnityEngine;
 namespace Assets.Scripts.Objects.Pipes {
 	[MonoModReplace] public class PipeAnalysizer : DevicePipeMounted {
 		private string _tooltip;
-		public Atmosphere NetworkAtmosphere => SmallCell.Pipe.PipeNetwork.Atmosphere;
+		public Atmosphere NetworkAtmosphere => base.SmallCell.Pipe.PipeNetwork.Atmosphere;
 		private bool hasReadableAtmosphere {
 			get {
-				if (SmallCell != null && SmallCell.Pipe != null) {
-					return SmallCell.Pipe.PipeNetwork?.Atmosphere != null;
+				if (base.SmallCell != null && base.SmallCell.Pipe != null) {
+					return base.SmallCell.Pipe.PipeNetwork?.Atmosphere != null;
 				}
 				return false;
 			}
@@ -145,7 +146,7 @@ namespace Assets.Scripts.Objects.Pipes {
 			if (!hasReadableAtmosphere) {
 				return base.GetPassiveTooltip(hitCollider);
 			}
-			PipeNetwork pipeNetwork = SmallCell.Pipe.PipeNetwork;
+			PipeNetwork pipeNetwork = base.SmallCell.Pipe.PipeNetwork;
 			Tooltip.AppendLine($"Pressure {pipeNetwork.Atmosphere.PressureGassesAndLiquidsInPa.ToStringPrefix("Pa", "yellow")}");
 			Tooltip.AppendLine($"Temperature {pipeNetwork.Atmosphere.Temperature.ToStringPrefix("K", "yellow")} (<color=yellow>{(pipeNetwork.Atmosphere.Temperature - 273.15).ToStringRounded()}°C</color>)");
 			Tooltip.AppendLine(AtmosphericsManager.DisplayGas(pipeNetwork.Atmosphere.GasMixture, pipeNetwork.Atmosphere.GasMixture.Oxygen));
