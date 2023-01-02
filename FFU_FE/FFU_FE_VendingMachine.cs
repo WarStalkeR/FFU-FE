@@ -20,7 +20,7 @@ using Assets.Scripts.Localization2;
 
 namespace Assets.Scripts.Objects.Electrical {
 	[MonoModReplace] public class VendingMachine : DeviceImportExport, ITradeable {
-	/// Sadly, full replace is a must, otherwise just pointing on power switch with crash the game.
+	/// Sadly, full replace is a must, otherwise just pointing on power switch will crash the game.
 		public const int StartIndex = 2;
 		public const int StorageSlots = 100;
 		public Transform PreviewTransform;
